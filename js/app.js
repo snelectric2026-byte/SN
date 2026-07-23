@@ -39,14 +39,14 @@ async function sendWhatsApp() {
 
     // حفظ الطلب في قاعدة البيانات Supabase
     if (window.saveServiceRequest) {
-        await window.saveServiceRequest({
+        window.saveServiceRequest({
             name: name,
             phone: phone,
             address: address,
             service: service,
             price: 0,
             notes: "طلب عبر الموقع الإلكتروني"
-        });
+        }).catch(err => console.error("Error saving service request:", err));
     }
 
     let adminPhone = "201287837118";
@@ -85,7 +85,7 @@ function addExperienceField() {
     container.appendChild(div);
 }
 
-// إرسال بيانات الفني وخبراته المتعددة لقاعدة البيانات ونسخة للواتساب
+// إرسال بيانات الفني وخبراته المتعددة لقاعدة البيانات وفتح واتساب فوراً
 async function submitTechWithExp() {
     let name = document.getElementById("tName").value.trim();
     let phone = document.getElementById("tPhone").value.trim();
@@ -93,7 +93,7 @@ async function submitTechWithExp() {
     let area = document.getElementById("tArea").value.trim();
 
     if (!name || !phone || !area) {
-        alert("يرجى ملء البيانات الأساسية.");
+        alert("يرجى ملء جميع البيانات الأساسية.");
         return;
     }
 
@@ -117,34 +117,41 @@ async function submitTechWithExp() {
         return;
     }
 
-    // 1. الحفظ في قاعدة البيانات عبر Supabase
+    // 1. فتح تطبيق الواتساب فوراً بدون انتظار لمنع حظر النافذة من المتصفح
+    let adminPhone = "201287837118";
+    let message = `طلب انضمام فني جديد:%0A` +
+                  `👤 الاسم: ${name}%0A` +
+                  `📞 الهاتف: ${phone}%0A` +
+                  `⚡ التخصص: ${specialty}%0A` +
+                  `📍 المنطقة: ${area}%0A` +
+                  `📋 سجل الخبرات:${expTextForWhatsApp}`;
+
+    window.open(`https://wa.me/${adminPhone}?text=${message}`, "_blank");
+
+    // 2. حفظ البيانات في Supabase في الخلفية
     if (window.registerTechnicianWithExperiences) {
-        let success = await window.registerTechnicianWithExperiences(
+        window.registerTechnicianWithExperiences(
             { name, phone, specialty, area },
             experiencesList
-        );
-
-        if (success) {
-            // 2. تجهيز رسالة الواتساب للإرسال برقمك الخاص
-            let adminPhone = "201287837118";
-            let message = `طلب انضمام فني جديد:%0A` +
-                          `👤 الاسم: ${name}%0A` +
-                          `📞 الهاتف: ${phone}%0A` +
-                          `⚡ التخصص: ${specialty}%0A` +
-                          `📍 المنطقة: ${area}%0A` +
-                          `📋 سجل الخبرات:${expTextForWhatsApp}`;
-
-            // فتح واتساب تلقائياً بالرسالة
-            window.open(`https://wa.me/${adminPhone}?text=${message}`, "_blank");
-
-            alert("تم إرسال طلب انضمامك وخبراتك بنجاح!");
-            
-            // تفريغ الحقول بعد الإرسال
-            document.getElementById("tName").value = "";
-            document.getElementById("tPhone").value = "";
-            document.getElementById("tArea").value = "";
-        } else {
-            alert("حدث خطأ أو أن رقم الهاتف مسجل مسبقاً.");
-        }
+        ).catch(err => console.error("Error saving technician to DB:", err));
     }
+
+    // 3. تفريغ الحقول بعد الإرسال
+    document.getElementById("tName").value = "";
+    document.getElementById("tPhone").value = "";
+    document.getElementById("tArea").value = "";
+    
+    // إعادة تعيين حقول الخبرات لحقل واحد افتراضي
+    document.getElementById("experiencesContainer").innerHTML = `
+        <div class="exp-group" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08);">
+            <label style="display:block; margin-bottom:5px; font-weight:700;">اسم الوظيفة / الدور</label>
+            <input type="text" class="exp-title" required placeholder="مثال: فني تنفيذ رئيسي" style="width:100%; padding:10px; background:var(--dark); border:1px solid var(--border); border-radius:8px; color:#fff; margin-bottom:10px;">
+
+            <label style="display:block; margin-bottom:5px; font-weight:700;">اسم المكان / الشركة / المشروع</label>
+            <input type="text" class="exp-workplace" required placeholder="مثال: شركة النور" style="width:100%; padding:10px; background:var(--dark); border:1px solid var(--border); border-radius:8px; color:#fff; margin-bottom:10px;">
+
+            <label style="display:block; margin-bottom:5px; font-weight:700;">المدة (الفترة الزمنية)</label>
+            <input type="text" class="exp-duration" required placeholder="مثال: من 2021 إلى 2024" style="width:100%; padding:10px; background:var(--dark); border:1px solid var(--border); border-radius:8px; color:#fff;">
+        </div>
+    `;
 }
